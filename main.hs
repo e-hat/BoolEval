@@ -3,19 +3,28 @@ import Data.List
 
 data Def = Def String Bool deriving (Show)
 
-parseDefTokens :: [String] -> [Def]
-parseDefTokens (name:"=":val:rest) 
-    | name == "|" || name == "&" = error $ name ++ ": invalid name in definitions"
-    | val == "T"                 = (Def name True):(parseDefTokens rest)
-    | val == "F"                 = (Def name False):(parseDefTokens rest)
-    | otherwise                  = error $ val ++ ": invalid syntax in definitions"
-parseDefTokens [] = []
-parseDefTokens (_:_:_:_) = error "Expected '='"
+specialChars = ["T","F","|","&","^","~"]
+
+main = do
+    defs <- getLine
+    expr <- getLine
+    putStrLn $ show $ eval defs expr
+
+eval :: String -> String -> Bool
+eval _ ""      = error "Cannot evaluate empty expression"
+eval defs expr = evalTokens $ substituteDefs (words expr) (parseDefs defs)
 
 parseDefs :: String -> [Def]
 parseDefs s = parseDefTokens $ words s
 
-specialChars = ["T","F","|","&","^","~"]
+parseDefTokens :: [String] -> [Def]
+parseDefTokens (name:"=":val:rest) 
+    | name `elem` specialChars = error $ name ++ ": invalid name in definitions"
+    | val == "T"               = (Def name True):(parseDefTokens rest)
+    | val == "F"               = (Def name False):(parseDefTokens rest)
+    | otherwise                = error $ val ++ ": invalid syntax in definitions"
+parseDefTokens [] = []
+parseDefTokens (_:_:_:_) = error "Expected '='"
 
 substituteDefs :: [String] -> [Def] -> [String]
 substituteDefs [] defs = []
@@ -51,13 +60,3 @@ evalTokens tokens = case (foldl (evalToken) [] tokens) of
     []    -> error "Error: empty value stack when terminating"
     [val] -> val
     _     -> error "Invalid expression: left with too many values on value stack" 
-
-               
-eval :: String -> String -> Bool
-eval _ ""      = error "Cannot evaluate empty expression"
-eval defs expr = evalTokens $ substituteDefs (words expr) (parseDefs defs)
-
-main = do
-    defs <- getLine
-    expr <- getLine
-    putStrLn $ show $ eval defs expr
